@@ -3,8 +3,6 @@
 from __future__ import annotations
 
 import base64
-import struct
-from pathlib import Path
 
 
 def _is_valid_png(data: bytes) -> bool:

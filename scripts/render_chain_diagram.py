@@ -28,10 +28,10 @@ def _read_log_entries(log_path: Path) -> list[dict]:
     entries = []
     for line in log_path.read_text(encoding="utf-8").splitlines():
         if line.strip():
-            try:
+            import contextlib
+
+            with contextlib.suppress(json.JSONDecodeError):
                 entries.append(json.loads(line))
-            except json.JSONDecodeError:
-                pass
     return entries
 
 
@@ -42,14 +42,14 @@ def render_chain_diagram(
     pubkey_path: Path | None = None,
 ) -> Path:
     """Build p4_chain_tamper.png matching mock-up 4A."""
-    import textwrap
 
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.patches as mpatches
         import matplotlib.pyplot as plt
-        from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+        from matplotlib.patches import FancyBboxPatch
     except ImportError:
         print("matplotlib is required. pip install matplotlib")
         sys.exit(1)
@@ -68,33 +68,34 @@ def render_chain_diagram(
     for i in range(5):
         if i < len(real_entries):
             e = real_entries[i]
-            records.append({
-                "seq": e.get("seq", i + 1),
-                "prev": _h(e, "prev_hash", "0" * 8),
-                "sig": "OK" if e.get("sig") else "NONE",
-                "event": str(e.get("event", f"event_{i+1}"))[:14],
-            })
+            records.append(
+                {
+                    "seq": e.get("seq", i + 1),
+                    "prev": _h(e, "prev_hash", "0" * 8),
+                    "sig": "OK" if e.get("sig") else "NONE",
+                    "event": str(e.get("event", f"event_{i + 1}"))[:14],
+                }
+            )
         else:
             prev_hashes = ["0000..", "a1f3..", "7be0..", "c92d..", "41aa.."]
-            records.append({
-                "seq": i + 1,
-                "prev": prev_hashes[i],
-                "sig": "OK",
-                "event": f"event_{i+1}",
-            })
+            records.append(
+                {
+                    "seq": i + 1,
+                    "prev": prev_hashes[i],
+                    "sig": "OK",
+                    "event": f"event_{i + 1}",
+                }
+            )
 
     # Record #3 (index 2) is the tampered one
     TAMPERED_IDX = 2
-    REPLAYED = {
-        "seq": 2,
-        "prev": records[1]["prev"],
-        "sig": "OK",
-        "event": "event_2 (again)",
-        "note": "nonce: reused",
-    }
 
     # Merkle root
-    merkle_root = "3f7a2c91…" if not real_entries else real_entries[-1].get("entry_hash", "unknown")[:12] + "…"
+    merkle_root = (
+        "3f7a2c91…"
+        if not real_entries
+        else real_entries[-1].get("entry_hash", "unknown")[:12] + "…"
+    )
 
     # ── Layout ───────────────────────────────────────────────────────────────
     BLUE = "#0070C0"
@@ -109,18 +110,48 @@ def render_chain_diagram(
     ax.axis("off")
 
     # Title
-    ax.text(8, 6.7, "CVAssure | Hash Chain — Tamper & Replay Detection",
-            ha="center", va="center", fontsize=16, fontweight="bold", color=NAVY)
+    ax.text(
+        8,
+        6.7,
+        "CVAssure | Hash Chain — Tamper & Replay Detection",
+        ha="center",
+        va="center",
+        fontsize=16,
+        fontweight="bold",
+        color=NAVY,
+    )
 
     # ── Draw Merkle root at top ───────────────────────────────────────────────
-    mr_box = FancyBboxPatch((5.5, 5.7), 5, 0.7, boxstyle="round,pad=0.1",
-                             linewidth=2, edgecolor=NAVY, facecolor="#dce8f7")
+    mr_box = FancyBboxPatch(
+        (5.5, 5.7),
+        5,
+        0.7,
+        boxstyle="round,pad=0.1",
+        linewidth=2,
+        edgecolor=NAVY,
+        facecolor="#dce8f7",
+    )
     ax.add_patch(mr_box)
-    ax.text(8, 6.05, f"Merkle root (signed, periodic) | covers #1–#5",
-            ha="center", va="center", fontsize=9, color=NAVY, fontweight="bold")
-    ax.text(8, 5.78, f"root: {merkle_root}…",
-            ha="center", va="center", fontsize=7.5, color=NAVY,
-            fontfamily="monospace")
+    ax.text(
+        8,
+        6.05,
+        "Merkle root (signed, periodic) | covers #1–#5",
+        ha="center",
+        va="center",
+        fontsize=9,
+        color=NAVY,
+        fontweight="bold",
+    )
+    ax.text(
+        8,
+        5.78,
+        f"root: {merkle_root}…",
+        ha="center",
+        va="center",
+        fontsize=7.5,
+        color=NAVY,
+        fontfamily="monospace",
+    )
 
     # ── Draw records ──────────────────────────────────────────────────────────
     xs = [1.0, 3.5, 6.0, 8.5, 11.0]
@@ -131,39 +162,83 @@ def render_chain_diagram(
 
     for i, rec in enumerate(records):
         x = xs[i]
-        is_tampered = (i == TAMPERED_IDX)
+        is_tampered = i == TAMPERED_IDX
         edge_c = RED if is_tampered else BLUE
         face_c = "#fff0f0" if is_tampered else LIGHT
         lw = 2.5 if is_tampered else 1.5
 
-        box = FancyBboxPatch((x, box_y), BOX_W, BOX_H,
-                              boxstyle="round,pad=0.08",
-                              linewidth=lw, edgecolor=edge_c, facecolor=face_c)
+        box = FancyBboxPatch(
+            (x, box_y),
+            BOX_W,
+            BOX_H,
+            boxstyle="round,pad=0.08",
+            linewidth=lw,
+            edgecolor=edge_c,
+            facecolor=face_c,
+        )
         ax.add_patch(box)
 
         sig_txt = "sig: FAIL" if is_tampered else "sig: OK"
         sig_col = RED if is_tampered else GREEN
 
         prefix = "(edited) " if is_tampered else ""
-        ax.text(x + BOX_W / 2, box_y + BOX_H - 0.2,
-                f"#{rec['seq']} {prefix}", ha="center", va="top",
-                fontsize=9, fontweight="bold", color=RED if is_tampered else NAVY)
-        ax.text(x + BOX_W / 2, box_y + BOX_H - 0.5,
-                f"seq {rec['seq']}", ha="center", va="top", fontsize=8, color="#444")
-        ax.text(x + BOX_W / 2, box_y + BOX_H - 0.75,
-                f"prev: {rec['prev']}", ha="center", va="top", fontsize=7.5,
-                color="#444", fontfamily="monospace")
-        ax.text(x + BOX_W / 2, box_y + BOX_H - 1.0,
-                sig_txt, ha="center", va="top", fontsize=8.5,
-                fontweight="bold", color=sig_col)
+        ax.text(
+            x + BOX_W / 2,
+            box_y + BOX_H - 0.2,
+            f"#{rec['seq']} {prefix}",
+            ha="center",
+            va="top",
+            fontsize=9,
+            fontweight="bold",
+            color=RED if is_tampered else NAVY,
+        )
+        ax.text(
+            x + BOX_W / 2,
+            box_y + BOX_H - 0.5,
+            f"seq {rec['seq']}",
+            ha="center",
+            va="top",
+            fontsize=8,
+            color="#444",
+        )
+        ax.text(
+            x + BOX_W / 2,
+            box_y + BOX_H - 0.75,
+            f"prev: {rec['prev']}",
+            ha="center",
+            va="top",
+            fontsize=7.5,
+            color="#444",
+            fontfamily="monospace",
+        )
+        ax.text(
+            x + BOX_W / 2,
+            box_y + BOX_H - 1.0,
+            sig_txt,
+            ha="center",
+            va="top",
+            fontsize=8.5,
+            fontweight="bold",
+            color=sig_col,
+        )
 
         if is_tampered:
-            ax.text(x + BOX_W / 2, box_y - 0.4,
-                    "REJECTED\nhash + sig do not verify",
-                    ha="center", va="top", fontsize=7.5, color=RED,
-                    fontweight="bold",
-                    bbox=dict(boxstyle="round,pad=0.2", facecolor="#fff0f0",
-                              edgecolor=RED, linewidth=1.5))
+            ax.text(
+                x + BOX_W / 2,
+                box_y - 0.4,
+                "REJECTED\nhash + sig do not verify",
+                ha="center",
+                va="top",
+                fontsize=7.5,
+                color=RED,
+                fontweight="bold",
+                bbox={
+                    "boxstyle": "round,pad=0.2",
+                    "facecolor": "#fff0f0",
+                    "edgecolor": RED,
+                    "linewidth": 1.5,
+                },
+            )
 
     # ── Arrows between records ────────────────────────────────────────────────
     arrow_y = y_record
@@ -171,70 +246,130 @@ def render_chain_diagram(
         x_start = xs[i] + BOX_W
         x_end = xs[i + 1]
         ax.annotate(
-            "", xy=(x_end + 0.05, arrow_y), xytext=(x_start - 0.05, arrow_y),
-            arrowprops=dict(arrowstyle="-|>", color=BLUE, lw=1.5),
+            "",
+            xy=(x_end + 0.05, arrow_y),
+            xytext=(x_start - 0.05, arrow_y),
+            arrowprops={"arrowstyle": "-|>", "color": BLUE, "lw": 1.5},
         )
 
     # ── Arrows from Merkle root to records 1 and 5 ───────────────────────────
     for i in (0, 4):
         ax.annotate(
-            "", xy=(xs[i] + BOX_W / 2, box_y + BOX_H),
+            "",
+            xy=(xs[i] + BOX_W / 2, box_y + BOX_H),
             xytext=(xs[i] + BOX_W / 2, 5.7),
-            arrowprops=dict(arrowstyle="-|>", color=NAVY, lw=1.2, linestyle="dotted"),
+            arrowprops={"arrowstyle": "-|>", "color": NAVY, "lw": 1.2, "linestyle": "dotted"},
         )
 
     # ── Replayed record ───────────────────────────────────────────────────────
     rx = 13.5
-    replay_box = FancyBboxPatch((rx, box_y), BOX_W, BOX_H,
-                                 boxstyle="round,pad=0.08",
-                                 linewidth=2.5, edgecolor=RED, facecolor="#fff0f0")
+    replay_box = FancyBboxPatch(
+        (rx, box_y),
+        BOX_W,
+        BOX_H,
+        boxstyle="round,pad=0.08",
+        linewidth=2.5,
+        edgecolor=RED,
+        facecolor="#fff0f0",
+    )
     ax.add_patch(replay_box)
-    ax.text(rx + BOX_W / 2, box_y + BOX_H - 0.2,
-            "#2 replayed", ha="center", va="top",
-            fontsize=9, fontweight="bold", color=RED)
-    ax.text(rx + BOX_W / 2, box_y + BOX_H - 0.5,
-            "seq 2 (again)", ha="center", va="top", fontsize=8, color="#444")
-    ax.text(rx + BOX_W / 2, box_y + BOX_H - 0.75,
-            f"prev: {records[1]['prev']}", ha="center", va="top", fontsize=7.5,
-            color="#444", fontfamily="monospace")
-    ax.text(rx + BOX_W / 2, box_y + BOX_H - 1.0,
-            "sig: OK", ha="center", va="top", fontsize=8.5,
-            fontweight="bold", color=GREEN)
+    ax.text(
+        rx + BOX_W / 2,
+        box_y + BOX_H - 0.2,
+        "#2 replayed",
+        ha="center",
+        va="top",
+        fontsize=9,
+        fontweight="bold",
+        color=RED,
+    )
+    ax.text(
+        rx + BOX_W / 2,
+        box_y + BOX_H - 0.5,
+        "seq 2 (again)",
+        ha="center",
+        va="top",
+        fontsize=8,
+        color="#444",
+    )
+    ax.text(
+        rx + BOX_W / 2,
+        box_y + BOX_H - 0.75,
+        f"prev: {records[1]['prev']}",
+        ha="center",
+        va="top",
+        fontsize=7.5,
+        color="#444",
+        fontfamily="monospace",
+    )
+    ax.text(
+        rx + BOX_W / 2,
+        box_y + BOX_H - 1.0,
+        "sig: OK",
+        ha="center",
+        va="top",
+        fontsize=8.5,
+        fontweight="bold",
+        color=GREEN,
+    )
 
-    ax.text(rx + BOX_W / 2, box_y - 0.4,
-            "REJECTED\nreplayed record: nonce reused",
-            ha="center", va="top", fontsize=7.5, color=RED, fontweight="bold",
-            bbox=dict(boxstyle="round,pad=0.2", facecolor="#fff0f0",
-                      edgecolor=RED, linewidth=1.5))
+    ax.text(
+        rx + BOX_W / 2,
+        box_y - 0.4,
+        "REJECTED\nreplayed record: nonce reused",
+        ha="center",
+        va="top",
+        fontsize=7.5,
+        color=RED,
+        fontweight="bold",
+        bbox={
+            "boxstyle": "round,pad=0.2",
+            "facecolor": "#fff0f0",
+            "edgecolor": RED,
+            "linewidth": 1.5,
+        },
+    )
 
     # Arrow from record #5 to replayed
     ax.annotate(
-        "", xy=(rx + 0.05, arrow_y), xytext=(xs[-1] + BOX_W - 0.05, arrow_y),
-        arrowprops=dict(arrowstyle="-|>", color=RED, lw=1.8, linestyle="dashed"),
+        "",
+        xy=(rx + 0.05, arrow_y),
+        xytext=(xs[-1] + BOX_W - 0.05, arrow_y),
+        arrowprops={"arrowstyle": "-|>", "color": RED, "lw": 1.8, "linestyle": "dashed"},
     )
 
     # ── Legend ────────────────────────────────────────────────────────────────
     legend_elements = [
-        mpatches.Patch(facecolor=LIGHT, edgecolor=BLUE, linewidth=1.5, label="Verified record (sig: OK)"),
+        mpatches.Patch(
+            facecolor=LIGHT, edgecolor=BLUE, linewidth=1.5, label="Verified record (sig: OK)"
+        ),
         mpatches.Patch(facecolor="#fff0f0", edgecolor=RED, linewidth=2, label="REJECTED record"),
-        mpatches.Patch(facecolor="#dce8f7", edgecolor=NAVY, linewidth=2, label="Signed Merkle root"),
+        mpatches.Patch(
+            facecolor="#dce8f7", edgecolor=NAVY, linewidth=2, label="Signed Merkle root"
+        ),
     ]
-    ax.legend(handles=legend_elements, loc="lower left", fontsize=9,
-              framealpha=0.9, edgecolor=NAVY)
+    ax.legend(handles=legend_elements, loc="lower left", fontsize=9, framealpha=0.9, edgecolor=NAVY)
 
     # ── Caption ───────────────────────────────────────────────────────────────
     caption = (
-        "What the judge should notice: Two red records — an edited output and a replayed old record — "
-        "both refused while every untouched record stays green."
+        "What the judge should notice: Two red records — an edited output and a replayed "
+        "old record — both refused while every untouched record stays green."
     )
-    ax.text(8, 0.3, caption, ha="center", va="bottom", fontsize=8,
-            color="#555", style="italic",
-            wrap=True)
+    ax.text(
+        8,
+        0.3,
+        caption,
+        ha="center",
+        va="bottom",
+        fontsize=8,
+        color="#555",
+        style="italic",
+        wrap=True,
+    )
 
     plt.tight_layout(rect=[0, 0.05, 1, 1])
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(out_path), dpi=130, bbox_inches="tight",
-                facecolor="white", edgecolor="none")
+    fig.savefig(str(out_path), dpi=130, bbox_inches="tight", facecolor="white", edgecolor="none")
     plt.close(fig)
     print(f"Saved: {out_path}  ({out_path.stat().st_size // 1024} KB)")
     return out_path
@@ -244,7 +379,9 @@ def main() -> None:
     import argparse
 
     parser = argparse.ArgumentParser(description="Render p4_chain_tamper.png")
-    parser.add_argument("--log", type=Path, default=None, help="audit.log (uses real hashes when given)")
+    parser.add_argument(
+        "--log", type=Path, default=None, help="audit.log (uses real hashes when given)"
+    )
     parser.add_argument("--out", type=Path, default=Path("p4_chain_tamper.png"))
     parser.add_argument("--pubkey", type=Path, default=None)
     args = parser.parse_args()

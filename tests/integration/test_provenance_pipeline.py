@@ -3,9 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
-
-import pytest
 
 
 def _make_keys(tmp_path):
@@ -22,6 +19,7 @@ def _build_scenario(tmp_path):
 
 
 # ── Full signed audit end-to-end ──────────────────────────────────────────────
+
 
 def test_signed_audit_end_to_end(tmp_path):
     """run_audit() with keypair → audit.log has signatures, chain verifies."""
@@ -55,6 +53,7 @@ def test_signed_audit_end_to_end(tmp_path):
 def test_unsigned_fallback_without_keys(tmp_path):
     """run_audit() without keys → falls back to SignedChain with ephemeral key."""
     import warnings
+
     from cvassure.core.pipeline import run_audit
 
     assets = _build_scenario(tmp_path)
@@ -73,13 +72,16 @@ def test_unsigned_fallback_without_keys(tmp_path):
     # Chain must be verifiable with whatever key was used internally
     assert result.chain_ok
     log = out / "audit.log"
-    entries = [json.loads(l) for l in log.read_text(encoding="utf-8").splitlines() if l.strip()]
+    entries = [
+        json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip()
+    ]
     assert len(entries) > 0
 
 
 def test_report_is_offline_html(tmp_path):
     """The generated report must contain no remote URLs."""
     import warnings
+
     from cvassure.core.pipeline import run_audit
 
     priv_path, pub_path = _make_keys(tmp_path)
@@ -107,9 +109,11 @@ def test_report_is_offline_html(tmp_path):
 
 # ── Live tamper rejection ─────────────────────────────────────────────────────
 
+
 def test_edit_rejected_live(tmp_path):
     """Edit one line → verify-log fails with 'signature invalid' or 'mismatch'."""
     import warnings
+
     from cvassure.core.pipeline import run_audit
     from cvassure.provenance.verify import verify_signed_log
 
@@ -119,7 +123,7 @@ def test_edit_rejected_live(tmp_path):
 
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
-        result = run_audit(
+        run_audit(
             data=assets["data"],
             model=assets["model"],
             records=assets["records"],
@@ -138,12 +142,17 @@ def test_edit_rejected_live(tmp_path):
 
     res = verify_signed_log(log, pub_path)
     assert res.ok is False
-    assert "invalid" in res.reason.lower() or "mismatch" in res.reason.lower() or "match" in res.reason.lower()
+    assert (
+        "invalid" in res.reason.lower()
+        or "mismatch" in res.reason.lower()
+        or "match" in res.reason.lower()
+    )
 
 
 def test_replay_rejected_live(tmp_path):
     """Duplicate a record line → detect_replay finds nonce reuse."""
     import warnings
+
     from cvassure.core.pipeline import run_audit
     from cvassure.provenance.verify import detect_all_tampering
 
@@ -153,7 +162,7 @@ def test_replay_rejected_live(tmp_path):
 
     with warnings.catch_warnings(record=True):
         warnings.simplefilter("always")
-        result = run_audit(
+        run_audit(
             data=assets["data"],
             model=assets["model"],
             records=assets["records"],
@@ -175,9 +184,11 @@ def test_replay_rejected_live(tmp_path):
 
 # ── Dashboard sections ────────────────────────────────────────────────────────
 
+
 def test_dashboard_has_required_sections(tmp_path):
     """The generated HTML report must have all mock-up 4B sections."""
     import warnings
+
     from cvassure.core.pipeline import run_audit
 
     priv_path, pub_path = _make_keys(tmp_path)
@@ -197,12 +208,12 @@ def test_dashboard_has_required_sections(tmp_path):
 
     content = (out / "report.html").read_text(encoding="utf-8")
     required_phrases = [
-        "Assurance Report",          # header
-        "Coverage Statement",        # coverage section
-        "Provenance",                # provenance panel
-        "Audit Log",                 # audit log section
-        "Findings",                  # findings table
-        "quarantine",                # export button
+        "Assurance Report",  # header
+        "Coverage Statement",  # coverage section
+        "Provenance",  # provenance panel
+        "Audit Log",  # audit log section
+        "Findings",  # findings table
+        "quarantine",  # export button
     ]
     for phrase in required_phrases:
         assert phrase in content, f"Missing section: {phrase!r}"
@@ -210,9 +221,11 @@ def test_dashboard_has_required_sections(tmp_path):
 
 # ── manifest keys set by signed run ──────────────────────────────────────────
 
+
 def test_manifest_has_signer_fingerprint(tmp_path):
     """When keys are given, the manifest should record chain_backend."""
     import warnings
+
     from cvassure.core.pipeline import run_audit
 
     priv_path, pub_path = _make_keys(tmp_path)

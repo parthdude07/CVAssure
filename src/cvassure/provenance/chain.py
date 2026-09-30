@@ -78,7 +78,6 @@ class SignedChain:
             self._sk = load_private(private_key_path)
             self._vk = load_public(public_key_path)
         elif private_key_path:
-            from nacl.signing import SigningKey
             self._sk = load_private(private_key_path)
             self._vk = self._sk.verify_key
         else:
@@ -87,7 +86,6 @@ class SignedChain:
                 "The log is signed, but verification requires the ephemeral public key.",
                 stacklevel=2,
             )
-            from nacl.signing import SigningKey
             from cvassure.provenance.keys import generate_keypair
 
             self._ephemeral_dir = tempfile.mkdtemp(prefix="cvassure_ephemeral_")
@@ -101,6 +99,7 @@ class SignedChain:
         # Merkle tree
         if use_merkle:
             from cvassure.provenance.merkle import MerkleTree
+
             self._merkle = MerkleTree()
 
         # Log file setup
@@ -189,7 +188,7 @@ class SignedChain:
         prev = GENESIS
         n = 0
         with open(self.path, encoding="utf-8") as fh:
-            for lineno, line in enumerate(fh, 1):
+            for _lineno, line in enumerate(fh, 1):
                 if not line.strip():
                     continue
                 try:

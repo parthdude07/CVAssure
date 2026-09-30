@@ -18,9 +18,8 @@ pass, then add the Ed25519 pass on top.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 
 @dataclass(frozen=True)
@@ -79,7 +78,8 @@ def verify_signed_log(
         )
 
     try:
-        from cvassure.provenance.keys import load_public, verify as _verify
+        from cvassure.provenance.keys import load_public
+        from cvassure.provenance.keys import verify as _verify
     except ImportError:
         return VerifyResult(
             ok=False,
@@ -118,7 +118,11 @@ def verify_signed_log(
                     signed=True,
                 )
             body = {k: v for k, v in entry.items() if k != "sig"}
-            body_bytes = __import__("cvassure.core.hashing", fromlist=["canonical_json"]).canonical_json(body).encode("utf-8")
+            body_bytes = (
+                __import__("cvassure.core.hashing", fromlist=["canonical_json"])
+                .canonical_json(body)
+                .encode("utf-8")
+            )
             if not _verify(pub_key, body_bytes, sig):
                 return VerifyResult(
                     ok=False,
@@ -176,6 +180,7 @@ def detect_all_tampering(
     if pub_key_path is not None:
         try:
             from cvassure.provenance.keys import load_public
+
             pub_key = load_public(pub_key_path)
         except Exception:
             pass
@@ -184,13 +189,20 @@ def detect_all_tampering(
     expected_seq = 1
     seen_entry_hashes: dict[str, tuple[int, int]] = {}  # hash -> (lineno, seq)
 
-    lines = [l for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+    lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
     for lineno, line in enumerate(lines, 1):
         try:
             entry = json.loads(line)
         except json.JSONDecodeError as exc:
-            evidence.append(TamperEvidence(lineno=lineno, seq=None, attack="edit", reason=f"JSON parse error: {exc}"))
+            evidence.append(
+                TamperEvidence(
+                    lineno=lineno,
+                    seq=None,
+                    attack="edit",
+                    reason=f"JSON parse error: {exc}",
+                )
+            )
             expected_seq += 1
             continue
 
@@ -199,15 +211,23 @@ def detect_all_tampering(
         # Reorder / delete detection via sequence gap
         if seq != expected_seq:
             evidence.append(
-                TamperEvidence(lineno=lineno, seq=seq, attack="reorder",
-                               reason=f"seq {seq}, expected {expected_seq} — reorder or delete")
+                TamperEvidence(
+                    lineno=lineno,
+                    seq=seq,
+                    attack="reorder",
+                    reason=f"seq {seq}, expected {expected_seq} — reorder or delete",
+                )
             )
 
         # Chain break (edit or delete of a prior entry)
         if entry.get("prev_hash") != prev_hash:
             evidence.append(
-                TamperEvidence(lineno=lineno, seq=seq, attack="edit",
-                               reason="prev_hash mismatch — prior entry edited or deleted")
+                TamperEvidence(
+                    lineno=lineno,
+                    seq=seq,
+                    attack="edit",
+                    reason="prev_hash mismatch — prior entry edited or deleted",
+                )
             )
 
         # Entry hash (body edit)
@@ -215,15 +235,22 @@ def detect_all_tampering(
         body_excl = {k: v for k, v in entry.items() if k not in ("entry_hash", "sig")}
         computed_eh = sha256_hex(canonical_json(body_excl))
         if eh != computed_eh:
-            evidence.append(TamperEvidence(lineno=lineno, seq=seq, attack="edit",
-                                           reason="entry_hash does not match body"))
+            evidence.append(
+                TamperEvidence(
+                    lineno=lineno, seq=seq, attack="edit", reason="entry_hash does not match body"
+                )
+            )
 
         # Replay detection (duplicate entry_hash in later position)
         if eh and eh in seen_entry_hashes:
             first_lineno, first_seq = seen_entry_hashes[eh]
             evidence.append(
-                TamperEvidence(lineno=lineno, seq=seq, attack="replay",
-                               reason=f"entry_hash duplicates line {first_lineno} (seq {first_seq})")
+                TamperEvidence(
+                    lineno=lineno,
+                    seq=seq,
+                    attack="replay",
+                    reason=f"entry_hash duplicates line {first_lineno} (seq {first_seq})",
+                )
             )
         elif eh:
             seen_entry_hashes[eh] = (lineno, seq or 0)
@@ -231,14 +258,29 @@ def detect_all_tampering(
         # Signature checks
         sig = entry.get("sig")
         if sig is None and entry.get("chained_signed"):
-            evidence.append(TamperEvidence(lineno=lineno, seq=seq, attack="strip",
-                                           reason="sig field missing on a chained_signed entry"))
+            evidence.append(
+                TamperEvidence(
+                    lineno=lineno,
+                    seq=seq,
+                    attack="strip",
+                    reason="sig field missing on a chained_signed entry",
+                )
+            )
         elif sig and pub_key is not None:
             from cvassure.provenance.keys import verify as _verify
-            body_bytes = canonical_json({k: v for k, v in entry.items() if k != "sig"}).encode("utf-8")
+
+            body_bytes = canonical_json({k: v for k, v in entry.items() if k != "sig"}).encode(
+                "utf-8"
+            )
             if not _verify(pub_key, body_bytes, sig):
-                evidence.append(TamperEvidence(lineno=lineno, seq=seq, attack="forge",
-                                               reason="Ed25519 signature invalid (edited or forged with wrong key)"))
+                evidence.append(
+                    TamperEvidence(
+                        lineno=lineno,
+                        seq=seq,
+                        attack="forge",
+                        reason="Ed25519 signature invalid (edited or forged with wrong key)",
+                    )
+                )
 
         prev_hash = eh or prev_hash
         expected_seq = (seq or expected_seq) + 1
@@ -246,8 +288,12 @@ def detect_all_tampering(
     # Truncation: head does not match expected_head from run_manifest
     if expected_head and prev_hash != expected_head:
         evidence.append(
-            TamperEvidence(lineno=len(lines), seq=None, attack="truncation",
-                           reason=f"chain head {prev_hash[:12]} ≠ expected {expected_head[:12]}")
+            TamperEvidence(
+                lineno=len(lines),
+                seq=None,
+                attack="truncation",
+                reason=f"chain head {prev_hash[:12]} ≠ expected {expected_head[:12]}",
+            )
         )
 
     return evidence

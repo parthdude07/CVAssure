@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from pathlib import Path
 
 
 def test_generate_keypair_creates_files(tmp_path):
@@ -75,7 +74,7 @@ def test_verify_wrong_key_fails(tmp_path):
 
 
 def test_fingerprint_is_16_hex(tmp_path):
-    from cvassure.provenance.keys import generate_keypair, load_public, fingerprint
+    from cvassure.provenance.keys import fingerprint, generate_keypair, load_public
 
     _, pub_path = generate_keypair(tmp_path / "k")
     vk = load_public(pub_path)
@@ -85,7 +84,7 @@ def test_fingerprint_is_16_hex(tmp_path):
 
 
 def test_fingerprint_is_stable(tmp_path):
-    from cvassure.provenance.keys import generate_keypair, load_public, fingerprint
+    from cvassure.provenance.keys import fingerprint, generate_keypair, load_public
 
     _, pub_path = generate_keypair(tmp_path / "k")
     vk = load_public(pub_path)
@@ -94,14 +93,14 @@ def test_fingerprint_is_stable(tmp_path):
 
 def test_private_key_never_in_fingerprint(tmp_path):
     """The fingerprint must only expose the public key, not private key bytes."""
-    from cvassure.provenance.keys import generate_keypair, load_private, load_public, fingerprint
+    from cvassure.provenance.keys import fingerprint, generate_keypair, load_private, load_public
 
     priv_path, pub_path = generate_keypair(tmp_path / "k")
     sk = load_private(priv_path)
     vk = load_public(pub_path)
     # The private key seed differs from the public key bytes
     priv_fp = fingerprint(bytes(sk))  # using private key bytes
-    pub_fp = fingerprint(bytes(vk))   # using public key bytes
+    pub_fp = fingerprint(bytes(vk))  # using public key bytes
     # They should differ (private != public in Ed25519)
     assert priv_fp != pub_fp
 

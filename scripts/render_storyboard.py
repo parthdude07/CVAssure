@@ -27,37 +27,86 @@ GREEN = "#1E7B34"
 LIGHT = "#EEF2F7"
 
 
-def _draw_frame(ax, x, y, w, h, *, number: int, title: str, subtitle: str,
-                content_lines: list[str], colour: str, bg: str) -> None:
+def _draw_frame(
+    ax,
+    x,
+    y,
+    w,
+    h,
+    *,
+    number: int,
+    title: str,
+    subtitle: str,
+    content_lines: list[str],
+    colour: str,
+    bg: str,
+) -> None:
     import matplotlib.patches as mpatches
 
     # Frame box
     box = mpatches.FancyBboxPatch(
-        (x, y), w, h, boxstyle="round,pad=0.04",
-        linewidth=2.5, edgecolor=colour, facecolor=bg, zorder=2,
+        (x, y),
+        w,
+        h,
+        boxstyle="round,pad=0.04",
+        linewidth=2.5,
+        edgecolor=colour,
+        facecolor=bg,
+        zorder=2,
     )
     ax.add_patch(box)
 
     # Number badge
-    ax.text(x + 0.15, y + h - 0.15, f"{number}",
-            ha="left", va="top", fontsize=28, fontweight="black",
-            color=colour, zorder=3)
+    ax.text(
+        x + 0.15,
+        y + h - 0.15,
+        f"{number}",
+        ha="left",
+        va="top",
+        fontsize=28,
+        fontweight="black",
+        color=colour,
+        zorder=3,
+    )
 
     # Title
-    ax.text(x + w / 2, y + h - 0.2, title,
-            ha="center", va="top", fontsize=12, fontweight="bold",
-            color=colour, zorder=3)
+    ax.text(
+        x + w / 2,
+        y + h - 0.2,
+        title,
+        ha="center",
+        va="top",
+        fontsize=12,
+        fontweight="bold",
+        color=colour,
+        zorder=3,
+    )
 
     # Subtitle
-    ax.text(x + w / 2, y + h - 0.55, subtitle,
-            ha="center", va="top", fontsize=8.5, color="#555",
-            style="italic", zorder=3)
+    ax.text(
+        x + w / 2,
+        y + h - 0.55,
+        subtitle,
+        ha="center",
+        va="top",
+        fontsize=8.5,
+        color="#555",
+        style="italic",
+        zorder=3,
+    )
 
     # Content lines
     for i, line in enumerate(content_lines):
-        ax.text(x + w / 2, y + h - 0.95 - i * 0.3, line,
-                ha="center", va="top", fontsize=8.5, color="#222",
-                zorder=3)
+        ax.text(
+            x + w / 2,
+            y + h - 0.95 - i * 0.3,
+            line,
+            ha="center",
+            va="top",
+            fontsize=8.5,
+            color="#222",
+            zorder=3,
+        )
 
 
 def render_storyboard(
@@ -68,9 +117,9 @@ def render_storyboard(
     """Build the 3-frame storyboard PNG."""
     try:
         import matplotlib
+
         matplotlib.use("Agg")
         import matplotlib.pyplot as plt
-        import matplotlib.patches as mpatches
     except ImportError:
         print("matplotlib required. pip install matplotlib")
         sys.exit(1)
@@ -88,8 +137,16 @@ def render_storyboard(
     ax.set_facecolor(LIGHT)
 
     # Title
-    ax.text(fig_w / 2, fig_h - 0.3, "CVAssure | C-07 Story in Three Frames",
-            ha="center", va="top", fontsize=16, fontweight="bold", color=NAVY)
+    ax.text(
+        fig_w / 2,
+        fig_h - 0.3,
+        "CVAssure | C-07 Story in Three Frames",
+        ha="center",
+        va="top",
+        fontsize=16,
+        fontweight="bold",
+        color=NAVY,
+    )
 
     # Frame dimensions
     MARGIN = 0.5
@@ -159,7 +216,11 @@ def render_storyboard(
         x = MARGIN + i * (FRAME_W + ARROW_W + GAP)
         frame_positions.append((x, FRAME_Y, FRAME_W, FRAME_H))
         _draw_frame(
-            ax, x, FRAME_Y, FRAME_W, FRAME_H,
+            ax,
+            x,
+            FRAME_Y,
+            FRAME_W,
+            FRAME_H,
             number=frame["number"],
             title=frame["title"],
             subtitle=frame["subtitle"],
@@ -172,10 +233,15 @@ def render_storyboard(
         if frame_screenshots and i < len(frame_screenshots) and frame_screenshots[i]:
             try:
                 from matplotlib.image import imread
+
                 img = imread(str(frame_screenshots[i]))
-                ax.imshow(img, extent=[x + 0.15, x + FRAME_W - 0.15,
-                                        FRAME_Y + 0.15, FRAME_Y + FRAME_H * 0.55],
-                          aspect="auto", zorder=2, alpha=0.85)
+                ax.imshow(
+                    img,
+                    extent=[x + 0.15, x + FRAME_W - 0.15, FRAME_Y + 0.15, FRAME_Y + FRAME_H * 0.55],
+                    aspect="auto",
+                    zorder=2,
+                    alpha=0.85,
+                )
             except Exception:
                 pass
 
@@ -183,11 +249,12 @@ def render_storyboard(
     for i in range(len(frames) - 1):
         x_from = frame_positions[i][0] + FRAME_W
         x_to = frame_positions[i + 1][0]
-        x_mid = (x_from + x_to) / 2
         y_mid = FRAME_Y + FRAME_H / 2
         ax.annotate(
-            "", xy=(x_to + 0.05, y_mid), xytext=(x_from - 0.05, y_mid),
-            arrowprops=dict(arrowstyle="-|>", color=NAVY, lw=2.5),
+            "",
+            xy=(x_to + 0.05, y_mid),
+            xytext=(x_from - 0.05, y_mid),
+            arrowprops={"arrowstyle": "-|>", "color": NAVY, "lw": 2.5},
             zorder=4,
         )
 
@@ -196,13 +263,13 @@ def render_storyboard(
         "What the judge should notice: Poison found, trigger matched, tamper rejected — "
         "the whole C-07 story in three frames."
     )
-    ax.text(fig_w / 2, 0.08, caption,
-            ha="center", va="bottom", fontsize=9, color="#555", style="italic")
+    ax.text(
+        fig_w / 2, 0.08, caption, ha="center", va="bottom", fontsize=9, color="#555", style="italic"
+    )
 
     plt.tight_layout(rect=[0, 0.04, 1, 1])
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    fig.savefig(str(out_path), dpi=130, bbox_inches="tight",
-                facecolor="white", edgecolor="none")
+    fig.savefig(str(out_path), dpi=130, bbox_inches="tight", facecolor="white", edgecolor="none")
     plt.close(fig)
     print(f"Saved: {out_path}  ({out_path.stat().st_size // 1024} KB)")
     return out_path

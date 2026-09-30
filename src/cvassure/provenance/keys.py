@@ -65,7 +65,9 @@ def load_public(path: Path):
     raw = path.read_text(encoding="utf-8").strip()
     key_bytes = bytes.fromhex(raw)
     if len(key_bytes) != 32:
-        raise ValueError(f"public key at {path} must be 32 bytes (64 hex chars), got {len(key_bytes)}")
+        raise ValueError(
+            f"public key at {path} must be 32 bytes (64 hex chars), got {len(key_bytes)}"
+        )
     return VerifyKey(key_bytes)
 
 

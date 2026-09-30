@@ -109,7 +109,9 @@ class ReplayEvidence:
     reason: str
 
 
-def write_signed_records(path: Path, records_data: list[dict[str, Any]], private_key, public_key) -> None:
+def write_signed_records(
+    path: Path, records_data: list[dict[str, Any]], private_key, public_key
+) -> None:
     """Write a chain of signed inference records to a JSONL file.
 
     ``records_data`` is a list of dicts, each with keys:
@@ -117,8 +119,6 @@ def write_signed_records(path: Path, records_data: list[dict[str, Any]], private
     ``ts``, ``nonce``, and ``seq`` are assigned here.
     """
     import secrets
-
-    from cvassure.core.audit import GENESIS as _GENESIS
 
     path.parent.mkdir(parents=True, exist_ok=True)
     prev = GENESIS
@@ -161,17 +161,26 @@ def detect_edit(path: Path, public_key) -> list[EditEvidence]:
         try:
             rec = json.loads(line)
         except json.JSONDecodeError as exc:
-            evidence.append(EditEvidence(lineno=lineno, seq=None, reason=f"JSON parse error: {exc}"))
+            evidence.append(
+                EditEvidence(
+                    lineno=lineno,
+                    seq=None,
+                    reason=f"JSON parse error: {exc}",
+                )
+            )
             continue
         seq = rec.get("seq")
         # Check entry_hash
         if rec.get("entry_hash") != _entry_hash(rec):
-            evidence.append(EditEvidence(lineno=lineno, seq=seq, reason="entry_hash does not match body"))
+            evidence.append(
+                EditEvidence(lineno=lineno, seq=seq, reason="entry_hash does not match body")
+            )
             continue
         # Check signature
-        if rec.get("sig"):
-            if not verify_record(rec, public_key):
-                evidence.append(EditEvidence(lineno=lineno, seq=seq, reason="Ed25519 signature invalid"))
+        if rec.get("sig") and not verify_record(rec, public_key):
+            evidence.append(
+                EditEvidence(lineno=lineno, seq=seq, reason="Ed25519 signature invalid")
+            )
     return evidence
 
 
@@ -235,7 +244,9 @@ def detect_chain_break(path: Path) -> list[EditEvidence]:
             )
         if rec.get("prev_hash") != prev:
             evidence.append(
-                EditEvidence(lineno=lineno, seq=seq, reason="prev_hash does not match previous entry_hash")
+                EditEvidence(
+                    lineno=lineno, seq=seq, reason="prev_hash does not match previous entry_hash"
+                )
             )
         prev = rec.get("entry_hash", prev)
         expected_seq += 1

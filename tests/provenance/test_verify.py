@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 
 def _make_keys(tmp_path):
@@ -26,6 +25,7 @@ def _build_signed_log(tmp_path, n=5):
 
 
 # ── verify_signed_log ─────────────────────────────────────────────────────────
+
 
 def test_verify_signed_log_clean(tmp_path):
     from cvassure.provenance.verify import verify_signed_log
@@ -50,6 +50,7 @@ def test_verify_signed_log_no_pubkey_falls_back(tmp_path):
 
 # ── Attack 1: Edit ────────────────────────────────────────────────────────────
 
+
 def test_detect_edit(tmp_path):
     from cvassure.provenance.verify import detect_all_tampering
 
@@ -67,6 +68,7 @@ def test_detect_edit(tmp_path):
 
 # ── Attack 2: Delete ──────────────────────────────────────────────────────────
 
+
 def test_detect_delete(tmp_path):
     from cvassure.provenance.verify import detect_all_tampering
 
@@ -81,6 +83,7 @@ def test_detect_delete(tmp_path):
 
 
 # ── Attack 3: Reorder ─────────────────────────────────────────────────────────
+
 
 def test_detect_reorder(tmp_path):
     from cvassure.provenance.verify import detect_all_tampering
@@ -97,8 +100,9 @@ def test_detect_reorder(tmp_path):
 
 # ── Attack 4: Truncation ──────────────────────────────────────────────────────
 
+
 def test_detect_truncation(tmp_path):
-    from cvassure.provenance.verify import detect_all_tampering, detect_truncation
+    from cvassure.provenance.verify import detect_truncation
 
     log, priv, pub, head = _build_signed_log(tmp_path, n=5)
     lines = log.read_text(encoding="utf-8").splitlines()
@@ -116,6 +120,7 @@ def test_no_truncation_when_head_matches(tmp_path):
 
 # ── Attack 5: Replay ─────────────────────────────────────────────────────────
 
+
 def test_detect_replay_duplicate_entry(tmp_path):
     from cvassure.provenance.verify import detect_all_tampering
 
@@ -131,9 +136,10 @@ def test_detect_replay_duplicate_entry(tmp_path):
 
 # ── Attack 6: Forge (wrong key) ───────────────────────────────────────────────
 
+
 def test_detect_forge_wrong_key(tmp_path):
-    from cvassure.provenance.verify import detect_all_tampering
     from cvassure.provenance.chain import SignedChain
+    from cvassure.provenance.verify import detect_all_tampering
 
     priv1, pub1 = _make_keys(tmp_path / "k1")
     priv2, pub2 = _make_keys(tmp_path / "k2")
@@ -152,6 +158,7 @@ def test_detect_forge_wrong_key(tmp_path):
 
 # ── Attack 7: Strip (sig removed) ────────────────────────────────────────────
 
+
 def test_detect_strip_missing_sig(tmp_path):
     from cvassure.provenance.verify import detect_all_tampering
 
@@ -169,6 +176,7 @@ def test_detect_strip_missing_sig(tmp_path):
 
 # ── Clean log: no evidence ────────────────────────────────────────────────────
 
+
 def test_clean_log_no_evidence(tmp_path):
     from cvassure.provenance.verify import detect_all_tampering
 
@@ -178,6 +186,7 @@ def test_clean_log_no_evidence(tmp_path):
 
 
 # ── detect_reorder utility ────────────────────────────────────────────────────
+
 
 def test_detect_reorder_utility(tmp_path):
     from cvassure.provenance.verify import detect_reorder

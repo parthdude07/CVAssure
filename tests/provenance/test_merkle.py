@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import pytest
-from cvassure.provenance.merkle import MerkleTree, EMPTY_ROOT
+
+from cvassure.provenance.merkle import EMPTY_ROOT, MerkleTree
 
 
 def test_empty_tree_root(tmp_path=None):
@@ -85,7 +86,7 @@ def test_audit_proof_wrong_root_fails(tmp_path=None):
     tree = MerkleTree()
     tree.add_leaf("a" * 64)
     tree.add_leaf("b" * 64)
-    root = tree.root()
+    tree.root()
     proof = tree.proof(0)
     assert MerkleTree.verify_proof("a" * 64, proof, "c" * 64) is False
 

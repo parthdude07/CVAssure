@@ -216,7 +216,9 @@ class VerifyResult:
     head: str
 
 
-def verify_file(path: Path, *, expected_head: str | None = None, allow_signatures: bool = False) -> VerifyResult:
+def verify_file(
+    path: Path, *, expected_head: str | None = None, allow_signatures: bool = False
+) -> VerifyResult:
     """Recompute the chain. Catches edit, delete, reorder and truncate.
 
     Truncation is caught by `expected_head`, which the pipeline passes from

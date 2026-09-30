@@ -82,8 +82,12 @@ def audit(
         None, help="Coverage rules YAML. Default configs/coverage_rules.yaml."
     ),
     as_json: bool = typer.Option(False, "--json", help="Also print the run manifest as JSON."),
-    privkey: Path | None = typer.Option(None, "--privkey", help="Ed25519 private key (.key) for signing the audit log."),
-    pubkey: Path | None = typer.Option(None, "--pubkey", help="Ed25519 public key (.pub) for verification."),
+    privkey: Path | None = typer.Option(
+        None, "--privkey", help="Ed25519 private key (.key) for signing the audit log."
+    ),
+    pubkey: Path | None = typer.Option(
+        None, "--pubkey", help="Ed25519 public key (.pub) for verification."
+    ),
 ) -> None:
     """Run the audit. Offline, CPU-only, no network."""
     from cvassure.core.pipeline import run_audit
@@ -197,15 +201,21 @@ def verify_log(
         # Signed log: use the provenance verifier
         try:
             from cvassure.provenance.verify import verify_signed_log
+
             res = verify_signed_log(log, pubkey, expected_head=expected)
         except ImportError:
-            console.print(f"[{YELLOW}]provenance package not available; falling back to hash-chain verify[/]")
+            console.print(
+                f"[{YELLOW}]provenance package not available; falling back to hash-chain verify[/]"
+            )
             res_core = verify_file(log, expected_head=expected)
             if res_core.ok:
-                console.print(f"[{GREEN}]chain verified[/]  {res_core.entries} entries, head {res_core.head[:12]}")
-                raise typer.Exit(ExitCode.OK)
+                console.print(
+                    f"[{GREEN}]chain verified[/]  "
+                    f"{res_core.entries} entries, head {res_core.head[:12]}"
+                )
+                raise typer.Exit(ExitCode.OK) from None
             console.print(f"[{RED}]chain verification FAILED[/]  {res_core.reason}")
-            raise typer.Exit(ExitCode.VERIFY)
+            raise typer.Exit(ExitCode.VERIFY) from None
         if res.ok:
             signed_txt = " (signed)" if res.signed else ""
             merkle_txt = f", merkle {res.merkle_root[:12]}" if res.merkle_root else ""
@@ -221,7 +231,9 @@ def verify_log(
     # No pubkey: hash-chain only
     res_core = verify_file(log, expected_head=expected, allow_signatures=True)
     if res_core.ok:
-        console.print(f"[{GREEN}]chain verified[/]  {res_core.entries} entries, head {res_core.head[:12]}")
+        console.print(
+            f"[{GREEN}]chain verified[/]  {res_core.entries} entries, head {res_core.head[:12]}"
+        )
         raise typer.Exit(ExitCode.OK)
     console.print(f"[{RED}]chain verification FAILED[/]  {res_core.reason}")
     raise typer.Exit(ExitCode.VERIFY)
@@ -441,7 +453,9 @@ def os_sysinfo_totalram() -> int:
 
 @app.command("generate-keys")
 def generate_keys(
-    path: Path = typer.Argument(Path("cvassure_key"), help="Base path for key files (no extension)."),
+    path: Path = typer.Argument(
+        Path("cvassure_key"), help="Base path for key files (no extension)."
+    ),
     overwrite: bool = typer.Option(False, help="Overwrite existing key files."),
 ) -> None:
     """Generate an Ed25519 keypair for signing audit logs and records."""
@@ -450,7 +464,7 @@ def generate_keys(
         from cvassure.provenance.keys import generate_keypair
     except ImportError:
         console.print(f"[{RED}]PyNaCl is not installed. Run: pip install 'PyNaCl>=1.5,<2'[/]")
-        raise typer.Exit(ExitCode.USAGE)
+        raise typer.Exit(ExitCode.USAGE) from None
 
     base = path.with_suffix("")
     priv = base.with_suffix(".key")
@@ -466,7 +480,9 @@ def generate_keys(
     console.print(f"[{GREEN}]Generated Ed25519 keypair[/]")
     console.print(f"  private key: {priv_path}")
     console.print(f"  public key:  {pub_path}")
-    console.print(f"[{YELLOW}]Keep the private key secret. Share only the public key for verification.[/]")
+    console.print(
+        f"[{YELLOW}]Keep the private key secret. Share only the public key for verification.[/]"
+    )
     raise typer.Exit(ExitCode.OK)
 
 

@@ -77,7 +77,7 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
     # ── 1. Generate keys ──────────────────────────────────────────────────────
     _step(1, total, "Generate Ed25519 signing keys")
     _t("=== [1/8] Generate Ed25519 keys ===")
-    from cvassure.provenance.keys import generate_keypair, fingerprint, load_public
+    from cvassure.provenance.keys import fingerprint, generate_keypair, load_public
 
     key_base = out_dir / "cvassure_demo"
     priv_path, pub_path = generate_keypair(key_base)
@@ -96,6 +96,7 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
     _t(f"\n=== [2/8] Build scenario seed={seed} ===")
     try:
         from cvassure.shift.scenario import build_demo_scenario  # type: ignore[import]
+
         scenario = build_demo_scenario(seed=seed)
         data_path = scenario["data"]
         model_path = scenario["model"]
@@ -110,6 +111,7 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
         _print("  Using synthetic scenario (shift.scenario not available)", colour=YELLOW)
         _t("Using synthetic scenario (shift.scenario not available)")
         from tests.fixtures.synthetic_scenario import build_all  # type: ignore[import]
+
         scenario_root = out_dir / "scenario"
         assets = build_all(scenario_root)
         data_path = assets["data"]
@@ -144,8 +146,19 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
     m, s = divmod(int(elapsed), 60)
 
     for stage in result.stages:
-        marker = {"ok": "PASS", "clean": "PASS", "skipped": "SKIP", "error": "FAIL"}.get(stage.status, "?")
-        colour = GREEN if stage.status in ("ok", "clean") else (YELLOW if stage.status == "skipped" else RED)
+        marker = {
+            "ok": "PASS",
+            "clean": "PASS",
+            "skipped": "SKIP",
+            "error": "FAIL",
+        }.get(stage.status, "?")
+        colour = (
+            GREEN
+            if stage.status in ("ok", "clean")
+            else YELLOW
+            if stage.status == "skipped"
+            else RED
+        )
         _print(f"  [{marker}] [{stage.index}/5] {stage.label:<38} {stage.detail}", colour=colour)
         _t(f"  [{marker}] [{stage.index}/5] {stage.label:<38} {stage.detail}")
 
@@ -154,7 +167,10 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
         _t(f"  LINK  {result.link_line}")
     _print(f"  DISPOSITION  {result.disposition_line}", colour=BLUE)
     _t(f"  DISPOSITION  {result.disposition_line}")
-    _print(f"\n  Report: {result.report_path}  sha256 {result.report_file_sha256[:12]}...", colour=GREEN)
+    _print(
+        f"\n  Report: {result.report_path}  sha256 {result.report_file_sha256[:12]}...",
+        colour=GREEN,
+    )
     _print(f"  Audit log: {out_dir / 'audit.log'}  Time: {m}:{s:02d}", colour=GREEN)
     _t(f"  Report: {result.report_path}")
     _t(f"  Time: {m}:{s:02d}")
@@ -164,6 +180,7 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
     _step(4, total, "Report QR code content")
     _t("\n=== [4/8] QR code ===")
     from cvassure.provenance.qr import payload_qr_content
+
     qr_content = payload_qr_content(result.manifest.get("payload_sha256", ""))
     _print(f"  QR encodes: {qr_content}", colour=BLUE)
     _t(f"  QR: {qr_content}")
@@ -221,11 +238,12 @@ def run_demo(out_dir: Path, seed: int = 42) -> None:
     lines = log_path.read_text(encoding="utf-8").splitlines()
     lines.append(lines[0])  # replay first entry
     log_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    replayed_nonce = json.loads(lines[0]).get("data", {}).get("nonce", "?")
-    _print(f"  [replay] Duplicated entry #1 at end", colour=YELLOW)
+    json.loads(lines[0]).get("data", {}).get("nonce", "?")
+    _print("  [replay] Duplicated entry #1 at end", colour=YELLOW)
     _t("  [replay] Duplicated entry #1 at end")
 
     from cvassure.provenance.verify import detect_all_tampering
+
     evidence = detect_all_tampering(log_path, pub_path)
     replay_hits = [e for e in evidence if e.attack == "replay"]
     if replay_hits:

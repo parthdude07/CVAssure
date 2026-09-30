@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 
 
 def _make_minimal_out_dir(tmp_path, *, with_findings=True):
@@ -111,17 +110,35 @@ def _make_minimal_out_dir(tmp_path, *, with_findings=True):
         "stub_flags": {"stub_ran": False, "stubs": []},
     }
     (out / "run_manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
-    (out / "coverage.json").write_text(json.dumps({
-        "rows": [
-            {"attack_class": "Patch trigger", "status": "Supported", "measured": "87%", "reason": ""},
-            {"attack_class": "Adaptive attacker", "status": "Unsupported", "measured": None, "reason": "Attacker knows the detectors"},
-        ]
-    }), encoding="utf-8")
-    (out / "quarantine.json").write_text(json.dumps({"samples": ["s001", "s007"]}), encoding="utf-8")
+    (out / "coverage.json").write_text(
+        json.dumps(
+            {
+                "rows": [
+                    {
+                        "attack_class": "Patch trigger",
+                        "status": "Supported",
+                        "measured": "87%",
+                        "reason": "",
+                    },
+                    {
+                        "attack_class": "Adaptive attacker",
+                        "status": "Unsupported",
+                        "measured": None,
+                        "reason": "Attacker knows the detectors",
+                    },
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    (out / "quarantine.json").write_text(
+        json.dumps({"samples": ["s001", "s007"]}), encoding="utf-8"
+    )
     return out
 
 
 # ── Core structure ────────────────────────────────────────────────────────────
+
 
 def test_render_report_creates_html(tmp_path):
     from cvassure.provenance.report import render_report
@@ -233,7 +250,7 @@ def test_report_has_meta_description(tmp_path):
 
     out = _make_minimal_out_dir(tmp_path)
     content = render_report(out).read_text(encoding="utf-8")
-    assert "<meta name=\"description\"" in content
+    assert '<meta name="description"' in content
 
 
 def test_qr_code_present(tmp_path):

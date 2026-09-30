@@ -4,9 +4,6 @@ from __future__ import annotations
 
 import json
 import secrets
-from pathlib import Path
-
-import pytest
 
 
 def _make_keys(tmp_path):
@@ -31,16 +28,22 @@ def _sample_data(n=5):
 
 # ── sign_record ───────────────────────────────────────────────────────────────
 
+
 def test_sign_record_returns_all_fields(tmp_path):
     from cvassure.provenance.records import sign_record
 
     sk, vk = _make_keys(tmp_path)
     rec = sign_record(
-        seq=1, ts="2026-01-01T00:00:01Z",
-        input_hash="sha256:abc", model_digest="sha256:def",
-        config_hash="sha256:ghi", output={"label": 0},
-        nonce="aabbcc", prev_hash="0" * 64,
-        private_key=sk, public_key=vk,
+        seq=1,
+        ts="2026-01-01T00:00:01Z",
+        input_hash="sha256:abc",
+        model_digest="sha256:def",
+        config_hash="sha256:ghi",
+        output={"label": 0},
+        nonce="aabbcc",
+        prev_hash="0" * 64,
+        private_key=sk,
+        public_key=vk,
     )
     for field in ("seq", "ts", "entry_hash", "sig", "pubkey_fp", "prev_hash", "nonce"):
         assert field in rec, f"missing field: {field}"
@@ -51,11 +54,16 @@ def test_verify_record_round_trip(tmp_path):
 
     sk, vk = _make_keys(tmp_path)
     rec = sign_record(
-        seq=1, ts="2026-01-01T00:00:01Z",
-        input_hash="sha256:abc", model_digest="sha256:def",
-        config_hash="sha256:ghi", output={},
-        nonce="nn", prev_hash="0" * 64,
-        private_key=sk, public_key=vk,
+        seq=1,
+        ts="2026-01-01T00:00:01Z",
+        input_hash="sha256:abc",
+        model_digest="sha256:def",
+        config_hash="sha256:ghi",
+        output={},
+        nonce="nn",
+        prev_hash="0" * 64,
+        private_key=sk,
+        public_key=vk,
     )
     assert verify_record(rec, vk) is True
 
@@ -65,11 +73,16 @@ def test_verify_record_fails_on_tampered_output(tmp_path):
 
     sk, vk = _make_keys(tmp_path)
     rec = sign_record(
-        seq=1, ts="2026-01-01T00:00:01Z",
-        input_hash="sha256:abc", model_digest="sha256:def",
-        config_hash="sha256:ghi", output={"label": 0},
-        nonce="nn", prev_hash="0" * 64,
-        private_key=sk, public_key=vk,
+        seq=1,
+        ts="2026-01-01T00:00:01Z",
+        input_hash="sha256:abc",
+        model_digest="sha256:def",
+        config_hash="sha256:ghi",
+        output={"label": 0},
+        nonce="nn",
+        prev_hash="0" * 64,
+        private_key=sk,
+        public_key=vk,
     )
     tampered = dict(rec)
     tampered["output"] = {"label": 1}  # change the output
@@ -86,8 +99,9 @@ def test_verify_record_no_sig_returns_false(tmp_path):
 
 # ── write_signed_records / detect_edit ────────────────────────────────────────
 
+
 def test_write_and_detect_no_edits(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_edit
+    from cvassure.provenance.records import detect_edit, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"
@@ -97,7 +111,7 @@ def test_write_and_detect_no_edits(tmp_path):
 
 
 def test_detect_edit_catches_tampered_output(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_edit
+    from cvassure.provenance.records import detect_edit, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"
@@ -116,7 +130,7 @@ def test_detect_edit_catches_tampered_output(tmp_path):
 
 
 def test_detect_edit_catches_entry_hash_mismatch(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_edit
+    from cvassure.provenance.records import detect_edit, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"
@@ -134,8 +148,9 @@ def test_detect_edit_catches_entry_hash_mismatch(tmp_path):
 
 # ── detect_replay ─────────────────────────────────────────────────────────────
 
+
 def test_detect_replay_clean(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_replay
+    from cvassure.provenance.records import detect_replay, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"
@@ -144,7 +159,7 @@ def test_detect_replay_clean(tmp_path):
 
 
 def test_detect_replay_catches_reused_nonce(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_replay
+    from cvassure.provenance.records import detect_replay, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"
@@ -166,8 +181,9 @@ def test_detect_replay_catches_reused_nonce(tmp_path):
 
 # ── detect_chain_break ────────────────────────────────────────────────────────
 
+
 def test_detect_chain_break_clean(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_chain_break
+    from cvassure.provenance.records import detect_chain_break, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"
@@ -176,7 +192,7 @@ def test_detect_chain_break_clean(tmp_path):
 
 
 def test_detect_chain_break_after_deletion(tmp_path):
-    from cvassure.provenance.records import write_signed_records, detect_chain_break
+    from cvassure.provenance.records import detect_chain_break, write_signed_records
 
     sk, vk = _make_keys(tmp_path)
     path = tmp_path / "records.jsonl"

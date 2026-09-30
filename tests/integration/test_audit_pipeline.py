@@ -89,7 +89,9 @@ def test_ids_are_assigned_in_order(run) -> None:
 
 def test_audit_log_verifies_against_the_manifest_head(run) -> None:
     manifest = json.loads((run.out_dir / "run_manifest.json").read_text(encoding="utf-8"))
-    res = verify_file(run.out_dir / "audit.log", expected_head=manifest["audit_head"], allow_signatures=True)
+    res = verify_file(
+        run.out_dir / "audit.log", expected_head=manifest["audit_head"], allow_signatures=True
+    )
     assert res.ok, res.reason
     assert res.head == run.chain_head
 
